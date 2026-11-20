@@ -88,6 +88,9 @@ test('v1.4: fallo al guardar adicional exige reconciliación física sin duplica
  assert.match(await page.locator('#cash-dialog-error').textContent(),/Confirma/);
  assert.deepEqual(await read(page),beforeRecovery);
  assert.ok(await page.locator('#cash-dialog').isVisible());
- assert.ok(await page.locator('#cash-recover').isVisible());await page.locator('#physical-recovery').check();await page.getByRole('button',{name:'Confirmar recuento y recuperar',exact:true}).click();await page.locator('#cash-dialog').waitFor({state:'hidden'});
- const s=await read(page);assert.equal(s.cash.MXN.counts[50000],1);assert.equal(s.cash.MXN.counts[5000],1);assert.equal(s.cash.MXN.counts[2000],1);assert.equal(s.pending.extra,null);assert.equal(s.cash.lastMovement,null);assert.equal(await page.locator('#prices input').inputValue(),'');assert.ok(await page.locator('#cash-recover').isHidden());
+ assert.ok(await page.locator('#cash-recover').isVisible());
+ // El recuento requiere resolver también la venta pendiente, no solo las piezas.
+ await page.locator('#recovery-decision').selectOption('completed');
+ await page.locator('#physical-recovery').check();await page.getByRole('button',{name:'Confirmar recuento y recuperar',exact:true}).click();await page.locator('#cash-dialog').waitFor({state:'hidden'});
+ const s=await read(page);assert.equal(s.cash.MXN.counts[50000],1);assert.equal(s.cash.MXN.counts[5000],1);assert.equal(s.cash.MXN.counts[2000],1);assert.equal(s.pending.extra,null);assert.equal(s.cash.lastMovement,null);assert.equal(s.sales.entries.length,1);assert.equal(s.sales.entries[0].total,'27000');assert.equal(await page.locator('#prices input').inputValue(),'');assert.ok(await page.locator('#cash-recover').isHidden());
 }));
