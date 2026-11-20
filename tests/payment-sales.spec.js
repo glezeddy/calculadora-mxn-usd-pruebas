@@ -82,3 +82,36 @@ test('ventas UI: migra recepción antigua bloqueada y finaliza sin duplicar efec
  const s=await read(page);assert.equal(s.cash.MXN.counts[20000],1);assert.equal(s.cash.MXN.counts[10000],0);assert.equal(s.sales.entries.length,1);assert.equal(s.sales.entries[0].total,'10000');
  },legacy=>{const key='cuenta-clara:cash:v1:'+location.pathname;if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify(legacy));},legacy);
 });
+
+test('cuadro de tarjetas: comparte totales, persiste, deshace, reinicia jornada y adapta tres cuadros',{timeout:120000},()=>fixture(async({page})=>{
+ const check=async(total,tdd,tdc)=>{
+  assert.equal(await page.locator('#card-payments-total').textContent(),total);
+  assert.equal(await page.locator('#card-payments-tdd').textContent(),tdd);
+  assert.equal(await page.locator('#card-payments-tdc').textContent(),tdc);
+  const rows=await page.locator('#sales-totals').evaluate(dl=>Object.fromEntries([...dl.querySelectorAll('dt')].map(dt=>[dt.textContent,dt.nextElementSibling.textContent])));
+  assert.equal(rows['Ventas TDD'],tdd);assert.equal(rows['Ventas TDC'],tdc);
+ };
+ await page.locator('#cash-management').evaluate(e=>e.open=true);
+ await check('$0.00 MXN','$0.00 MXN','$0.00 MXN');
+ assert.equal(await page.locator('.cash-balances>div').count(),3);
+ assert.equal(await page.locator('#card-payments-balance button, #card-payments-balance input').count(),0);
+ const cashBefore=(await read(page)).cash;
+ for(const [tdc,tdd] of [['200','300'],['100','400']]){
+  await page.locator('#prices input').fill('500');await fillCard(page,'tdd',tdd);await fillCard(page,'tdc',tdc);await page.locator('#cash-finish').click();await confirm(page);
+ }
+ await check('$1,000.00 MXN','$700.00 MXN','$300.00 MXN');
+ let cash=(await read(page)).cash;assert.deepEqual(cash.MXN,cashBefore.MXN);assert.deepEqual(cash.USD,cashBefore.USD);
+ await page.reload();await page.locator('#cash-management').evaluate(e=>e.open=true);await check('$1,000.00 MXN','$700.00 MXN','$300.00 MXN');
+ for(const width of [320,390,768,1280]){
+  await page.setViewportSize({width,height:900});
+  const rects=await page.locator('.cash-balances>div').evaluateAll(els=>els.map(e=>{const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right};}));
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  if(width===1280){assert.equal(rects[0].top,rects[1].top);assert.equal(rects[1].top,rects[2].top);assert.ok(rects[0].right<=rects[1].left&&rects[1].right<=rects[2].left);}
+  if(width<=390)assert.ok(rects[0].bottom<=rects[1].top&&rects[1].bottom<=rects[2].top);
+  if(width===390||width===1280)await page.locator('#cash-management').screenshot({path:'test-results/card-balances-'+width+'.png'});
+ }
+ await undo(page);await check('$500.00 MXN','$300.00 MXN','$200.00 MXN');
+ await page.locator('#cash-day').click();await page.locator('input[name="cash-day-mode"][value="keep"]').check();await page.locator('#physical-day').check();await page.getByRole('button',{name:'Comenzar jornada',exact:true}).click();await page.locator('#cash-dialog').waitFor({state:'hidden'});
+ await check('$0.00 MXN','$0.00 MXN','$0.00 MXN');
+ cash=(await read(page)).cash;assert.deepEqual(cash.MXN.counts,cashBefore.MXN.counts);assert.deepEqual(cash.USD.counts,cashBefore.USD.counts);
+}));

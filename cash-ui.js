@@ -47,6 +47,9 @@ export function createCashUI(hooks){
      $(`cash-total-${cur}`).textContent=blocked&&!store?'No disponible':money(totalCounts(cur,s.cash[cur].counts),cur);
    }
    const totals=salesTotals(s.sales),list=$('sales-totals');list.replaceChildren();
+   $('card-payments-total').textContent=money(totals.tdd+totals.tdc);
+   $('card-payments-tdd').textContent=money(totals.tdd);
+   $('card-payments-tdc').textContent=money(totals.tdc);
    for(const [label,value]of [['Número de ventas',String(totals.count)],['Total vendido',money(totals.total)],['Efectivo MXN',money(totals.cashMXN)],['Efectivo USD en MXN',money(totals.cashUSD)],['Ventas TDD',money(totals.tdd)],['Ventas TDC',money(totals.tdc)]]){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;list.append(dt,dd);}
    $('cash-undo').disabled=!!blocked||busy||(!s.saleUndo&&!s.cash.lastMovement)||locked||hasDraftMoney(s);
    for(const id of ['cash-verify-mxn','cash-verify-usd','cash-day','cash-receive','cash-finish','cash-adjust'])$(id).disabled=!!blocked||busy;
