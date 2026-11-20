@@ -60,6 +60,10 @@ function render() {
   $('total').textContent = invalid ? '—' : money(total);
   const usd = currency() !== 'MXN';
   const rate = activeRate();
+  const referenceUSD = $('price-usd-value');
+  const referenceNote = $('price-usd-note');
+  referenceUSD.textContent = invalid || !hasPrices || !rate ? '—' : money(totalUSD(total, rate), 'USD');
+  referenceNote.textContent = !rate ? 'Configura una tasa válida en «03. Tipo de cambio» para consultar el equivalente.' : 'Referencia calculada con la tasa seleccionada en «03. Tipo de cambio». El cargo real en USD de una tarjeta extranjera depende del banco emisor.';
   $('mxn-box').hidden = currency() === 'USD';
   $('usd-box').hidden = !usd;
   $('usd-total-box').hidden = currency() !== 'USD';
