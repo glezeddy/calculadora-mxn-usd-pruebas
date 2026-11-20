@@ -81,6 +81,13 @@ test('v1.4: fallo al guardar adicional exige reconciliación física sin duplica
  await page.getByRole('button',{name:'Aplicar adicional recibido',exact:true}).click();assert.match(await page.locator('#cash-dialog-error').textContent(),/No se guardó/);assert.equal((await read(page)).pending.extra,null);assert.equal((await read(page)).cash.MXN.counts[5000],0);await cancelDialog(page);
  await page.reload();assert.ok(await page.locator('#cash-finish').isDisabled());assert.ok(await page.locator('#cash-recover').isVisible());await page.locator('#cash-recover').click();
  const mxn=page.getByRole('group',{name:'Recuento de recuperación · MXN',exact:true});await mxn.locator('[data-denom="50000"]').fill('1');await mxn.locator('[data-denom="5000"]').fill('1');await mxn.locator('[data-denom="2000"]').fill('1');
- await page.getByRole('button',{name:'Confirmar recuento y recuperar',exact:true}).click();assert.match(await page.locator('#cash-dialog-error').textContent(),/Confirma/);await page.locator('#physical-recovery').check();await page.getByRole('button',{name:'Confirmar recuento y recuperar',exact:true}).click();await page.locator('#cash-dialog').waitFor({state:'hidden'});
+ const beforeRecovery=await read(page);
+ await page.getByRole('button',{name:'Confirmar recuento y recuperar',exact:true}).click();
+ // La validación termina después de adquirir el bloqueo de almacenamiento.
+ await page.waitForFunction(()=>document.querySelector('#cash-dialog-error').textContent.includes('Confirma'));
+ assert.match(await page.locator('#cash-dialog-error').textContent(),/Confirma/);
+ assert.deepEqual(await read(page),beforeRecovery);
+ assert.ok(await page.locator('#cash-dialog').isVisible());
+ assert.ok(await page.locator('#cash-recover').isVisible());await page.locator('#physical-recovery').check();await page.getByRole('button',{name:'Confirmar recuento y recuperar',exact:true}).click();await page.locator('#cash-dialog').waitFor({state:'hidden'});
  const s=await read(page);assert.equal(s.cash.MXN.counts[50000],1);assert.equal(s.cash.MXN.counts[5000],1);assert.equal(s.cash.MXN.counts[2000],1);assert.equal(s.pending.extra,null);assert.equal(s.cash.lastMovement,null);assert.equal(await page.locator('#prices input').inputValue(),'');assert.ok(await page.locator('#cash-recover').isHidden());
 }));
